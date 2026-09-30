@@ -2,7 +2,8 @@
 
 **Date:** 2026-09-07
 **Issue:** #3671
-**Lockfiles changed:**
+**Landed in:** #4063, which raised the four overrides below to 4.3.2 without a dated audit. This document records why 4.3.2 is the floor.
+**Lockfiles affected:**
 - `agent-governance-antigravity-cli/package-lock.json`
 - `agent-governance-claude-code/package-lock.json`
 - `agent-governance-copilot-cli/package-lock.json`

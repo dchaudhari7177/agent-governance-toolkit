@@ -1425,12 +1425,7 @@ jobs:
             terraform -chdir="$directory" validate -no-color
           done
 
-  # ── CI Gate — required status check that handles skipped jobs ────────
-  # When path-filters skip jobs (e.g. docs-only PRs skip tests), those
-  # jobs report "skipped" which doesn't satisfy required status checks.
-  # This gate job always runs, checks that no jobs FAILED, and reports
-  # success. Configure this as the single required status check.
-  # -- Windows visibility (reports only, never gates) --------------------
+  # ── Windows visibility (reports only, never gates) ────────────────────
   test-windows:
     needs: changes
     # The Python suite has never run on Windows: every one of the 98 test jobs
@@ -1481,11 +1476,15 @@ jobs:
         id: gate
         env:
           CHANGED: ${{ needs.changes.outputs.changed-py-pkgs }}
+          WORKFLOWS: ${{ needs.changes.outputs.workflows }}
           PKG: ${{ matrix.package }}
           EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
           if [ "$EVENT" = "schedule" ] || [ "$EVENT" = "push" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [ "$WORKFLOWS" = "true" ]; then
+            # A workflow change, this job's included, runs the whole matrix.
             echo "run=true" >> "$GITHUB_OUTPUT"
           elif printf '%s' "$CHANGED" | grep -q "\"$PKG\""; then
             echo "run=true" >> "$GITHUB_OUTPUT"
@@ -1529,11 +1528,11 @@ jobs:
               exit 1
               ;;
           esac
-          CI_TEST_REQS="$GITHUB_WORKSPACE/agent-governance-python/requirements/ci-test.txt"
-          if [ -f "$CI_TEST_REQS" ]; then
-            pip install --no-cache-dir --require-hashes -r "$CI_TEST_REQS"
+          CI_TEST_REQUIREMENTS="$GITHUB_WORKSPACE/agent-governance-python/requirements/ci-test.txt"
+          if [ -f "$CI_TEST_REQUIREMENTS" ]; then
+            pip install --no-cache-dir --require-hashes -r "$CI_TEST_REQUIREMENTS"
           else
-            echo "::warning::ci-test.txt not found at $CI_TEST_REQS - skipping shared test deps"
+            echo "::warning::ci-test.txt not found at $CI_TEST_REQUIREMENTS - skipping shared test deps"
           fi
       - name: Test ${{ matrix.package }} on Windows
         if: steps.gate.outputs.run == 'true'
@@ -1545,6 +1544,11 @@ jobs:
             echo "No tests/ directory - skipping package tests"
           fi
 
+  # ── CI Gate — required status check that handles skipped jobs ────────
+  # When path-filters skip jobs (e.g. docs-only PRs skip tests), those
+  # jobs report "skipped" which doesn't satisfy required status checks.
+  # This gate job always runs, checks that no jobs FAILED, and reports
+  # success. Configure this as the single required status check.
   ci-complete:
     if: always()
     needs:

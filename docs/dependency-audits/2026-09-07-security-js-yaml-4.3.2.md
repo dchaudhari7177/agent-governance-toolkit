@@ -25,9 +25,9 @@
 
 The patched floor for the 4.x line is therefore **4.3.2**: 4.3.1 clears the first two advisories but not GHSA-2883-xcg3-v3hh, which is why the override is not set any lower.
 
-The four CLI packages carry `js-yaml` transitively through `@microsoft/agent-governance-sdk` and pin it with an npm `overrides` field, added in the 2026-06-16 audit to clear GHSA-h67p-54hq-rp68. That pin is what now holds the tree at the affected 4.2.0, so raising the override is the fix — removing it instead resolves *down* to the SDK's own 4.1.1, which is affected by both of these advisories and by the earlier one.
+The four CLI packages carry `js-yaml` transitively through `@microsoft/agent-governance-sdk` and pin it with an npm `overrides` field, added in the 2026-06-16 audit to clear GHSA-h67p-54hq-rp68. That pin is what held the tree at the affected 4.2.0, so raising the override was the fix. What removing it would do now depends on the SDK each package uses. `agent-governance-opencode` still depends on SDK 3.7.0, whose lock entry requests `js-yaml` 4.1.1, so it would resolve *down* to a version affected by all three advisories above. The other three packages depend on SDK 5.0.0, which requests `js-yaml` 5.2.1, so they would resolve *up* to the 5.x line instead, as the 2026-09-22 codex-cli lockfile audit notes.
 
-`npm audit --package-lock-only`, per package (re-run 2026-09-13; the "before" lockfiles report all three advisories above against `js-yaml`):
+`npm audit --package-lock-only`, per package (re-run 2026-10-03 against the lockfiles before and after #4063). npm counts vulnerable *packages*, not advisories: the two high findings "before" are `js-yaml`, which carries all three advisories above, and `@microsoft/agent-governance-sdk`, flagged through its `js-yaml` dependency.
 
 | Package | Before | After |
 |---|---|---|
@@ -38,7 +38,7 @@ The four CLI packages carry `js-yaml` transitively through `@microsoft/agent-gov
 
 ## Downstream consumers
 
-Not fixed by this change. An `overrides` field applies to the package's own tree, not to consumers installing the published packages, whose resolution follows `@microsoft/agent-governance-sdk`'s constraint instead. The published SDK versions these packages depend on (4.0.0, and 3.7.0 for opencode) resolve `js-yaml` to 4.1.1. `agent-governance-typescript` already declares `js-yaml` 5.2.3 on `main`, so a release cut from current `main` carries a patched constraint of its own; until such a release, downstream trees need their own override.
+Not fixed by this change. An `overrides` field applies to the package's own tree, not to consumers installing the published packages, whose resolution follows `@microsoft/agent-governance-sdk`'s constraint instead. Three of the four packages now depend on SDK 5.0.0, whose lock entry requests `js-yaml` 5.2.1, so their consumers already get the 5.x line. Only `agent-governance-opencode` is still on SDK 3.7.0, which requests 4.1.1, so its consumers need their own override until it moves to a newer SDK. `agent-governance-typescript` declares `js-yaml` 5.4.2 on `main`.
 
 ## Breaking change risk
 
